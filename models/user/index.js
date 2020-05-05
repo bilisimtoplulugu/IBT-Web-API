@@ -6,7 +6,6 @@ const UserSchema = new Schema({
   name: {
     type: String,
     required: true,
-    unique: true,
   },
   surname: {
     type: String,
@@ -28,9 +27,10 @@ const UserSchema = new Schema({
   emailAddress: {
     type: String,
     required: true,
+    unique: true,
   },
   permission: [PermissionSchema],
   /* group */
 });
 
-export default UserSchema;
+export default mongoose.model('user', UserSchema);
