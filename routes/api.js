@@ -23,18 +23,15 @@ router.post('/register', async (req, res) => {
     emailAddress,
   } = req.body;
 
-  // auto-gen a salt and hash,
-  bcrypt.hash(password, 10, (err, hash) => {
-    // hash variable represents that hashed form for our plain password
-    if (err) throw err; // error handling
-  });
+  // hash variable represents that hashed form for our plain password
+  const hash = await bcrypt.hash(password, 10);
 
   // generate new user on db
   const userGenerated = await User.create({
     name,
     surname,
     username,
-    password,
+    password: hash,
     phoneNumber,
     emailAddress,
   });
@@ -46,10 +43,14 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const {username, password} = req.body;
 
+  // find user by username came from client
   const doc = await User.findOne({username});
-  
-  if (doc.password == password)
-   return res.send(doc._id);
+
+  // compare operation between hashed password and plain text password came from client
+  const match = await bcrypt.compare(password, doc.password);
+
+  // if matches login success
+  if (match) return res.send(doc._id);
 });
 
 export default router;
