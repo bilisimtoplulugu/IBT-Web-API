@@ -12,7 +12,7 @@ router.get('/', (req, res) => {
 });
 
 // POST request for /register endpoint
-router.post('/register', async(req, res) => {
+router.post('/register', async (req, res) => {
   // get required fields to register from request body which has sent by client
   const {
     name,
@@ -39,12 +39,17 @@ router.post('/register', async(req, res) => {
     emailAddress,
   });
 
-  res.send(userGenerated._id)
+  res.send(userGenerated._id);
 });
 
 // POST request for /login endpoint
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const {username, password} = req.body;
+
+  const doc = await User.findOne({username});
+  
+  if (doc.password == password)
+   return res.send(doc._id);
 });
 
 export default router;
