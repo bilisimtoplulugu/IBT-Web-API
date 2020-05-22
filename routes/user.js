@@ -7,11 +7,7 @@ import User from '../models/user/index';
 
 const router = express.Router(); // call express.Router function to provide route
 
-router.get('/', (req, res) => {
-  res.send('Index Get Request');
-});
-
-// POST request for /register endpoint
+// POST request for /user/register endpoint
 router.post('/register', async (req, res) => {
   // get required fields to register from request body which has sent by client
   const {
@@ -39,7 +35,7 @@ router.post('/register', async (req, res) => {
   res.send(userGenerated._id);
 });
 
-// POST request for /login endpoint
+// POST request for /user/login endpoint
 router.post('/login', async (req, res) => {
   const {username, password} = req.body;
 
