@@ -5,6 +5,13 @@ import User from '../models/user';
 
 const router = express.Router(); // call express.Router function to provide route
 
+router.get('/near', async (req, res) => {
+  // need some validations
+  const x = await Event.find().sort({_id:-1}).limit(6);
+  console.log(x.reverse())
+  //res.send(generatedEvent);
+});
+
 router.get('/:eventId', async (req, res) => {
   // event exist validation
   const {eventId} = req.params;
