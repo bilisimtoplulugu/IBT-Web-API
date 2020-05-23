@@ -29,6 +29,7 @@ const UserSchema = new Schema({
     required: true,
     unique: true,
   },
+  imagePath: String,
   permission: [PermissionSchema],
   /* group */
 });
