@@ -3,35 +3,19 @@ import PermissionSchema from './permission';
 const Schema = mongoose.Schema;
 
 const UserSchema = new Schema({
-  name: {
-    type: String,
-    required: true,
-  },
-  surname: {
-    type: String,
-    required: true,
-  },
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  phoneNumber: {
-    type: String,
-    /* required: true, should it be? */
-  },
-  emailAddress: {
-    type: String,
-    required: true,
-    unique: true,
-  },
+  name: String,
+  surname: String,
+  username: String,
+  password: String,
+  phoneNumber: String,
+  email: String,
   imagePath: String,
+  registerDate: {
+    type: Date,
+    default: Date.now,
+  },
+  agreementChecked: {type: Boolean, default: false},
   permission: [PermissionSchema],
-  /* group */
 });
 
 export default mongoose.model('user', UserSchema);

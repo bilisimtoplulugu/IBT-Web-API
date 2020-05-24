@@ -8,10 +8,19 @@ const router = express.Router(); // call express.Router function to provide rout
 
 router.get('/near', async (req, res) => {
   // need some validations
-  const x = await Event.find().sort({_id: -1}).limit(6);
-  console.log(x.reverse());
+
+  const nearEvents = await Event.find().sort({date: 1});
+  res.send(nearEvents);
+
+  //const x = await Event.find({date: {$gt: new Date()}});
   //res.send(generatedEvent);
 });
+
+router.get('/e/:eventId',async(req,res)=>{
+  const {eventId} = req.params;
+  const event = await Event.findById(eventId);
+  res.send(event)
+})
 
 router.get('/:seoUrl', async (req, res) => {
   // event exist validation
@@ -22,7 +31,7 @@ router.get('/:seoUrl', async (req, res) => {
   const participantsDetails = await User.find({
     _id: {$in: event.participants},
   });
-  res.json({event, participants:participantsDetails});
+  res.json({event, participants: participantsDetails});
 });
 
 router.post('/generate', async (req, res) => {
