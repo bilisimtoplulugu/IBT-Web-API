@@ -7,6 +7,8 @@ import toSeoUrl from '../utils/toSeoUrl';
 const router = express.Router(); // call express.Router function to provide route
 
 router.get('/near', async (req, res) => {
+  // this router should return nearby
+
   // need some validations
 
   const nearEvents = await Event.find().sort({date: 1});
@@ -16,17 +18,16 @@ router.get('/near', async (req, res) => {
   //res.send(generatedEvent);
 });
 
-router.get('/e/:eventId',async(req,res)=>{
+router.get('/e/:eventId', async (req, res) => {
   const {eventId} = req.params;
   const event = await Event.findById(eventId);
-  res.send(event)
-})
+  res.send(event);
+});
 
 router.get('/:seoUrl', async (req, res) => {
   // event exist validation
   const {seoUrl} = req.params;
-  console.log(seoUrl);
-  const event = await Event.findOne({seoUrl});
+  const event = await Event.findOne({seoUrl}, {participants: {$slice: 8}});
   if (!event) return res.status(404).send('Event not found!');
   const participantsDetails = await User.find({
     _id: {$in: event.participants},
@@ -36,17 +37,23 @@ router.get('/:seoUrl', async (req, res) => {
 
 router.post('/generate', async (req, res) => {
   const {title} = req.body;
-  // need some validations
+  if (!title) return res.status(400).send('You must fill all fields.');
   req.body.seoUrl = toSeoUrl(title);
   const generatedEvent = await Event.create(req.body);
   res.send(generatedEvent);
 });
 
 router.patch('/join', async (req, res) => {
-  // error handling need
-  const {username, eventId} = req.body;
+  const {userId, eventId} = req.body;
+  if (!userId || !eventId)
+    return res.status(400).send('You must fill all fields.');
   const event = await Event.findById(eventId);
-  event.participants.push(username);
+  const user = await User.findById(userId).select({joinedEvents: 1});
+  if (!event) return res.status(404).send('Event could not found.');
+  if (!user) return res.status(404).send('User could not found.');
+  user.joinedEvents.push(eventId);
+  event.participants.push(userId);
+  user.save();
   event.save();
   res.send('saved');
 });

@@ -14,6 +14,7 @@ const UserSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  joinedEvents: [String],
   agreementChecked: {type: Boolean, default: false},
   permission: [PermissionSchema],
 });
