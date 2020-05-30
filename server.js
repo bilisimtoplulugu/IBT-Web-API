@@ -11,7 +11,8 @@ import api from './routes';
 const app = express(); // call express package constructor
 const PORT = 2222 || process.env.PORT; // If there is environment port (from deployment platform) set it, if there is no set 2222
 app.use(bodyParser.json()); // body-parser middleware to get data from requests body
-app.use(cors()); 
+app.use(cors());
+app.use(express.static("assets"));
 dotenv.config(); // dotenv package configuration
 
 /* Mongoose connection provider */

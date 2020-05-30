@@ -3,16 +3,15 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import randomstring from 'randomstring';
 import jwt from 'jsonwebtoken';
-import path from 'path';
-import multer from 'multer';
+import fileupload from 'express-fileupload';
 
 /* MongoDB Models */
 import User from '../models/user';
 import Event from '../models/event';
 import sendCodeToVerifyEmail from '../utils/sendCodeToVerifyEmail';
-import checkFileType from '../utils/checkFileType';
 
 const router = express.Router(); // call express.Router function to provide route
+router.use(fileupload());
 
 // POST request for /user/register endpoint
 router.post('/register', async (req, res) => {
@@ -178,25 +177,18 @@ router.patch('/change-personal', async (req, res) => {
   res.send();
 });
 
-var upload = multer({
-  storage: multer.diskStorage({
-    destination: './assets/images',
-    filename: function (req, file, cb) {
-      cb(
-        null,
-        file.fieldname + '-' + Date.now() + path.extname(file.originalname)
-      );
-    },
-  }),
-  fileFilter: function (req, file, cb) {
-    checkFileType(file, cb);
-  },
-});
+router.patch('/change-profile-photo', (req, res) => {
+  /* HERE COULD BE ASYNC AWAIT */
+  const {userId} = req.query;
 
-router.patch('/change-profile-photo', upload.single('post-image'), async (req, res) => {
-  //console.log(req.file.path)
-  console.log(req.body)
-  res.send();
+  const file = req.files.file;
+
+  file.mv(`${__dirname}/../assets/images/${userId}.png`, (err) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
+    return res.send();
+  });
 });
 
 export default router;
