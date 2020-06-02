@@ -13,6 +13,12 @@ import sendCodeToVerifyEmail from '../utils/sendCodeToVerifyEmail';
 const router = express.Router(); // call express.Router function to provide route
 router.use(fileupload());
 
+router.get('/:userId',async(req,res)=>{
+  const {userId} = req.params;
+
+  const user = await User.findById(userId).select({z})
+})
+
 // POST request for /user/register endpoint
 router.post('/register', async (req, res) => {
   const {email, password} = req.body;
@@ -24,9 +30,10 @@ router.post('/register', async (req, res) => {
   req.body.password = hash;
 
   // generate new user on db
-  const userGenerated = await User.create(req.body);
-
-  res.send(userGenerated._id);
+  const user = await User.create(req.body);
+  
+  const token = await jwt.sign({user}, process.env.JWT_SECRET_KEY);
+  res.json({user, token});
 });
 
 // POST request for /user/login endpoint
@@ -69,6 +76,8 @@ router.post('/auth', async (req, res) => {
       {_id: {$in: user.joinedEvents}},
       {joinedEvents: {$slice: 4}}
     );
+    //console.log(eventDetails)
+    //console.log(user.joinedEvents)
     //console.log(user)
     //console.log(eventDetails)
     /* let y = user;
@@ -184,9 +193,8 @@ router.patch('/change-profile-photo', (req, res) => {
   const file = req.files.file;
 
   file.mv(`${__dirname}/../assets/images/${userId}.png`, (err) => {
-    if (err) {
-      return res.status(500).send(err);
-    }
+    if (err) return res.status(500).send(err);
+    
     return res.send();
   });
 });
