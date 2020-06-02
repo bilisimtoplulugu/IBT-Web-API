@@ -16,7 +16,7 @@ const UserSchema = new Schema({
   },
   joinedEvents: [String],
   agreementChecked: {type: Boolean, default: false},
-  permission: [PermissionSchema],
+  /* permission: [PermissionSchema], */
 });
 
 export default mongoose.model('user', UserSchema);

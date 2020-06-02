@@ -6,10 +6,9 @@ const EventSchema = new Schema({
   subtitle: String,
   seoUrl: String,
   description: String,
-  date: Date,
-  imagePath: {
-    type: String,
-    default: `/assets/images/image${Date.now()}.png`,
+  date: {
+    type: Date,
+    default: Date.now,
   },
   address: String,
   participants: [String],
