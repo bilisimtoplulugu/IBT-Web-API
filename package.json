@@ -23,6 +23,7 @@
         "jsonwebtoken": "^8.5.1",
         "mongoose": "^5.9.11",
         "nodemailer": "^6.4.6",
-        "randomstring": "^1.1.5"
+        "randomstring": "^1.1.5",
+        "redis": "^3.0.2"
     }
 }

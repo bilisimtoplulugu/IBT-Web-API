@@ -33,7 +33,7 @@ router.get('/all-joined-events', async (req, res) => {
     .select({joinedEvents: 1})
     .populate(
       'joinedEvents',
-      'title subtitle description organizer seoUrl date'
+      '_id title subtitle description organizer seoUrl date'
     )
     .exec();
 
