@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
-import PermissionSchema from './permission';
+/* import PermissionSchema from './permission'; */
 const Schema = mongoose.Schema;
 
-const UserSchema = new Schema({
+const userSchema = new Schema({
+  _id: mongoose.Schema.Types.ObjectId,
   name: String,
   surname: String,
   username: String,
@@ -14,9 +15,9 @@ const UserSchema = new Schema({
     type: Date,
     default: Date.now,
   },
-  joinedEvents: [String],
+  joinedEvents: [{type: mongoose.Schema.Types.ObjectId, ref: 'Event'}],
   agreementChecked: {type: Boolean, default: false},
   /* permission: [PermissionSchema], */
 });
 
-export default mongoose.model('user', UserSchema);
+export default mongoose.model('User', userSchema);

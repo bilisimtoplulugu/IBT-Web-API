@@ -1,14 +1,16 @@
 import mongoose from 'mongoose';
 const Schema = mongoose.Schema;
 
-const EventSchema = new Schema({
+const eventSchema = new Schema({
+  _id: mongoose.Schema.Types.ObjectId,
   title: String,
   subtitle: String,
   seoUrl: String,
   description: String,
-  date: {
+  date: Date,
+  publishedDate: {
     type: Date,
-    default: Date.now,
+    default: Date.now(),
   },
   address: String,
   participants: [String],
@@ -18,4 +20,5 @@ const EventSchema = new Schema({
   organizer: String,
 });
 
-export default mongoose.model('event', EventSchema);
+const Event = mongoose.model('Event', eventSchema);
+export default Event;
