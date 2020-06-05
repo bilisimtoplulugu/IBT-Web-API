@@ -1,5 +1,7 @@
 /* Packages I used */
 import express from 'express';
+import mongoose from 'mongoose';
+
 import Event from '../models/event';
 import User from '../models/user';
 import toSeoUrl from '../utils/toSeoUrl';
@@ -10,7 +12,8 @@ router.get('/near', async (req, res) => {
   // this router should return nearby events
 
   try {
-    const nearEvents = await Event.find();
+    const nearEvents = await Event.find({date: {$gt: new Date()}});
+    console.log(nearEvents)
     return res.send(nearEvents);
   } catch (error) {
     return res.status(400).send(error);
@@ -20,21 +23,34 @@ router.get('/near', async (req, res) => {
   //res.send(generatedEvent);
 });
 
-/* DEPRECATED */
-/* router.get('/e/:eventId', async (req, res) => {
-  const {eventId} = req.params;
-  const event = await Event.findById(eventId);
-  res.send(event);
-}); */
+router.get('/all-participants', async (req, res) => {
+  const {eventUrl} = req.query;
 
-router.get('/:seoUrl', async (req, res) => {
-  // event exist validation
-  const {seoUrl} = req.params;
-
-  const event = await Event.findOne({seoUrl}, {participants: {$slice: 8}});
+  const event = await Event.findOne({seoUrl: eventUrl}).select({
+    participants: 1,
+  });
 
   if (!event) return res.status(404).send('Event not found!');
 
+  const participantsDetails = await User.find({
+    _id: {$in: event.participants},
+  }).select({username: 1, name: 1, surname: 1});
+
+  res.send(participantsDetails);
+});
+
+router.get('/:eventUrl', async (req, res) => {
+  // event exist validation
+  const {eventUrl} = req.params;
+
+  const event = await Event.findOne(
+    {seoUrl: eventUrl},
+    {participants: {$slice: 8}}
+  );
+
+  if (!event) return res.status(404).send('Event not found!');
+
+  /* todo: implement populate here */
   const participantsDetails = await User.find({
     _id: {$in: event.participants},
   });
@@ -47,6 +63,7 @@ router.post('/generate', async (req, res) => {
 
   if (!title) return res.status(400).send('You must fill all fields.');
 
+  req.body._id = mongoose.Types.ObjectId();
   req.body.seoUrl = toSeoUrl(title);
   const generatedEvent = await Event.create(req.body);
 

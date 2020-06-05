@@ -4,20 +4,76 @@ import bcrypt from 'bcrypt';
 import randomstring from 'randomstring';
 import jwt from 'jsonwebtoken';
 import fileupload from 'express-fileupload';
+import mongoose from 'mongoose';
 
 /* MongoDB Models */
 import User from '../models/user';
 import Event from '../models/event';
 import sendCodeToVerifyEmail from '../utils/sendCodeToVerifyEmail';
+import {client} from '../server';
 
 const router = express.Router(); // call express.Router function to provide route
 router.use(fileupload());
 
-router.get('/:userId',async(req,res)=>{
-  const {userId} = req.params;
+/* router.get('/', (req, res) => {
+  console.log('/user get');
+  client.setex('username', 3600, 'ahmet');
+  client.get('username', (err, data) => {
+    console.log(data);
+    console.log(err);
+  });
+}); */
 
-  const user = await User.findById(userId).select({z})
-})
+router.get('/all-joined-events', async (req, res) => {
+  const {username} = req.query;
+
+  if (!username) return res.status(400).send('Please fill all fields.');
+
+  const user = await User.findOne({username})
+    .select({joinedEvents: 1})
+    .populate(
+      'joinedEvents',
+      'title subtitle description organizer seoUrl date'
+    )
+    .exec();
+
+  if (!user) return res.status(404).send('User not found.');
+
+  const {joinedEvents} = user;
+
+  return res.send(joinedEvents);
+});
+
+router.get('/last-events', async (req, res) => {
+  const {userId} = req.query;
+  if (!userId) return res.status(400).send('Please fill all fields.');
+
+  const user = await User.findById(userId).select({
+    joinedEvents: 1,
+  });
+  const eventDetails = await Event.find({_id: {$in: user.joinedEvents}});
+  res.send(eventDetails);
+});
+
+router.get('/:username', async (req, res) => {
+  const {username} = req.params;
+
+  const user = await User.findOne({username})
+    .select({
+      _id: 1,
+      name: 1,
+      surname: 1,
+      email: 1,
+      username: 1,
+      joinedEvents: 1,
+    })
+    .populate('joinedEvents', 'seoUrl')
+    .exec();
+
+  if (!user) return res.status(404).send('User not found.');
+
+  res.send(user);
+});
 
 // POST request for /user/register endpoint
 router.post('/register', async (req, res) => {
@@ -26,12 +82,13 @@ router.post('/register', async (req, res) => {
   // hash variable represents that hashed form for our plain password
   const hash = await bcrypt.hash(password, 10);
 
+  req.body._id = mongoose.Types.ObjectId();
   req.body.username = email.split('@')[0];
   req.body.password = hash;
 
   // generate new user on db
   const user = await User.create(req.body);
-  
+
   const token = await jwt.sign({user}, process.env.JWT_SECRET_KEY);
   res.json({user, token});
 });
@@ -71,28 +128,27 @@ router.post('/auth', async (req, res) => {
     const {
       user: {_id},
     } = await jwt.verify(token, process.env.JWT_SECRET_KEY);
-    let user = await User.findById(_id);
-    const eventDetails = await Event.find(
-      {_id: {$in: user.joinedEvents}},
-      {joinedEvents: {$slice: 4}}
-    );
-    //console.log(eventDetails)
-    //console.log(user.joinedEvents)
-    //console.log(user)
-    //console.log(eventDetails)
-    /* let y = user;
-let x = {...y,a:1}
-console.log({x:{_doc}}) */
 
-    //user = {...user, eventDetails};
+    /* return client.get(_id, (err, data) => {
+      if (err) throw err;
+      return res.send(data)
+    }); */
 
-    //x.eventDetails = eventDetails;
-    //console.log(x.eventDetails)
-    //user.eventDetails = eventDetails;
+    const user = await User.findById(_id)
+      .select({
+        _id: 1,
+        name: 1,
+        surname: 1,
+        email: 1,
+        username: 1,
+        joinedEvents: 1,
+      })
+      .populate('joinedEvents', 'seoUrl')
+      .exec();
+    console.log(user);
     return res.send(user);
   } catch (e) {
     console.log(e);
-
     return res.status(400).send('Invalid token.');
   }
 });
@@ -128,7 +184,6 @@ router.post('/email-verification', async (req, res) => {
       process.env.JWT_SECRET_KEY
     );
 
-    // incorrect confirm code
     if (code !== email_verification)
       return res.status(401).send('Incorrect Confirm Code');
 
@@ -136,17 +191,6 @@ router.post('/email-verification', async (req, res) => {
   } catch (e) {
     res.status(401).send('Invalid Token');
   }
-});
-
-router.get('/last-events', async (req, res) => {
-  const {userId} = req.query;
-  if (!userId) return res.status(400).send('Please fill all fields.');
-
-  const user = await User.findById(userId).select({
-    joinedEvents: 1,
-  });
-  const eventDetails = await Event.find({_id: {$in: user.joinedEvents}});
-  res.send(eventDetails);
 });
 
 router.patch('/change-password', async (req, res) => {
@@ -178,6 +222,13 @@ router.patch('/change-personal', async (req, res) => {
   const user = await User.findById(userId);
   if (!user) return res.status(404).send('User not found.');
 
+  /* user = {
+    ...user,
+    name,
+    email,
+    surname,
+  }; */
+
   user.name = name;
   user.surname = surname;
   user.email = email;
@@ -187,14 +238,14 @@ router.patch('/change-personal', async (req, res) => {
 });
 
 router.patch('/change-profile-photo', (req, res) => {
-  /* HERE COULD BE ASYNC AWAIT */
+  /* TODO: HERE COULD BE ASYNC AWAIT */
   const {userId} = req.query;
 
   const file = req.files.file;
 
   file.mv(`${__dirname}/../assets/images/${userId}.png`, (err) => {
     if (err) return res.status(500).send(err);
-    
+
     return res.send();
   });
 });
