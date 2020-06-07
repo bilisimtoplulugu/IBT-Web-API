@@ -8,19 +8,22 @@ import toSeoUrl from '../utils/toSeoUrl';
 
 const router = express.Router(); // call express.Router function to provide route
 
-router.get('/near', async (req, res) => {
-  // this router should return nearby events
+router.get('/past', async (req, res) => {
+  try {
+    const pastEvents = await Event.find({date: {$lt: new Date()}});
+    return res.send(pastEvents);
+  } catch (error) {
+    return res.status(400).send(error);
+  }
+});
 
+router.get('/near', async (req, res) => {
   try {
     const nearEvents = await Event.find({date: {$gt: new Date()}});
-    console.log(nearEvents)
     return res.send(nearEvents);
   } catch (error) {
     return res.status(400).send(error);
   }
-
-  //const x = await Event.find({date: {$gt: new Date()}});
-  //res.send(generatedEvent);
 });
 
 router.get('/all-participants', async (req, res) => {
@@ -40,7 +43,6 @@ router.get('/all-participants', async (req, res) => {
 });
 
 router.get('/:eventUrl', async (req, res) => {
-  // event exist validation
   const {eventUrl} = req.params;
 
   const event = await Event.findOne(
@@ -50,7 +52,7 @@ router.get('/:eventUrl', async (req, res) => {
 
   if (!event) return res.status(404).send('Event not found!');
 
-  /* todo: implement populate here */
+  /* todo: populate here */
   const participantsDetails = await User.find({
     _id: {$in: event.participants},
   });
@@ -62,6 +64,10 @@ router.post('/generate', async (req, res) => {
   const {title} = req.body;
 
   if (!title) return res.status(400).send('You must fill all fields.');
+
+  const seoUrl = toSeoUrl(title);
+  const event = Event.count({seoUrl});
+  /* todo: event exist with this name ocntrol */
 
   req.body._id = mongoose.Types.ObjectId();
   req.body.seoUrl = toSeoUrl(title);

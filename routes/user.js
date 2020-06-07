@@ -3,17 +3,21 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import randomstring from 'randomstring';
 import jwt from 'jsonwebtoken';
-import fileupload from 'express-fileupload';
+import fileUpload from 'express-fileupload';
 import mongoose from 'mongoose';
 
-/* MongoDB Models */
 import User from '../models/user';
 import Event from '../models/event';
+
 import sendCodeToVerifyEmail from '../utils/sendCodeToVerifyEmail';
 import {client} from '../server';
 
-const router = express.Router(); // call express.Router function to provide route
-router.use(fileupload());
+const router = express.Router();
+router.use(
+  fileUpload({
+    limits: {fileSize: 2048},
+  })
+);
 
 /* router.get('/', (req, res) => {
   console.log('/user get');
@@ -97,25 +101,23 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const {email, password} = req.body;
 
-  // find user by email (username also valid) came from client
-  const user = await User.findOne().or([{email}, {username: email}]);
-
+  const user = await User.findOne()
+    .or([{email}, {username: email}])
+    .select({
+      _id: 1,
+      name: 1,
+      surname: 1,
+      email: 1,
+      password: 1,
+      username: 1,
+      joinedEvents: 1,
+    })
+    .populate('joinedEvents', 'seoUrl')
+    .exec();
   if (!user) return res.status(404).send('User not found.');
 
-  // compare operation between hashed password and plain text password came from client
   const match = await bcrypt.compare(password, user.password);
-
-  // if matches login success
   if (!match) return res.status(401).send('Incorrect Pass');
-
-  const eventDetails = await Event.find(
-    {
-      _id: {$in: user.joinedEvents},
-    },
-    {joinedEvents: {$slice: 4}}
-  );
-  user.joinedEvents = eventDetails;
-  console.log(eventDetails);
 
   const token = await jwt.sign({user}, process.env.JWT_SECRET_KEY);
   res.json({user, token});
@@ -123,16 +125,13 @@ router.post('/login', async (req, res) => {
 
 router.post('/auth', async (req, res) => {
   const {token} = req.body;
-  console.log('auth');
+
+  if (!token) return res.status(400).send('Unauthorized.');
+
   try {
     const {
       user: {_id},
     } = await jwt.verify(token, process.env.JWT_SECRET_KEY);
-
-    /* return client.get(_id, (err, data) => {
-      if (err) throw err;
-      return res.send(data)
-    }); */
 
     const user = await User.findById(_id)
       .select({
@@ -145,7 +144,7 @@ router.post('/auth', async (req, res) => {
       })
       .populate('joinedEvents', 'seoUrl')
       .exec();
-    console.log(user);
+
     return res.send(user);
   } catch (e) {
     console.log(e);
@@ -159,9 +158,9 @@ router.post('/send-code-to-email', async (req, res) => {
 
   if (!emailTo) return res.status(400).send('Please fill all fields.');
 
-  const isRegistered = await User.findOne({email: emailTo});
+  const {length: isRegistered} = await User.count({email: emailTo});
 
-  if (isRegistered)
+  if (isRegistered > 0)
     return res.status(400).send('This e-mail address already registered.');
 
   console.log(confirmCode);
@@ -215,22 +214,20 @@ router.patch('/change-password', async (req, res) => {
 });
 
 router.patch('/change-personal', async (req, res) => {
-  const {userId, name, surname, email} = req.body;
+  const {userId, name, surname, username, email} = req.body;
   if (!userId || !name || !surname || !email)
     return res.status(400).send('Please fill all fields.');
 
   const user = await User.findById(userId);
   if (!user) return res.status(404).send('User not found.');
 
-  /* user = {
-    ...user,
-    name,
-    email,
-    surname,
-  }; */
+  const {length: existingControl} = await User.find().or([{username}, {email}]);
+  if (existingControl > 2)
+    return res.status(404).send('This e-mail or username is already using.');
 
   user.name = name;
   user.surname = surname;
+  user.username = username;
   user.email = email;
   user.save();
 
