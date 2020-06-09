@@ -3,30 +3,40 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import randomstring from 'randomstring';
 import jwt from 'jsonwebtoken';
-import fileUpload from 'express-fileupload';
 import mongoose from 'mongoose';
+import multer from 'multer';
 
 import User from '../models/user';
 import Event from '../models/event';
 
 import sendCodeToVerifyEmail from '../utils/sendCodeToVerifyEmail';
-import {client} from '../server';
+import {client as redisClient} from '../server';
 
 const router = express.Router();
-router.use(
-  fileUpload({
-    limits: {fileSize: 2048},
-  })
-);
 
-/* router.get('/', (req, res) => {
-  console.log('/user get');
-  client.setex('username', 3600, 'ahmet');
-  client.get('username', (err, data) => {
-    console.log(data);
-    console.log(err);
-  });
-}); */
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, './assets/images');
+  },
+  filename: function (req, file, cb) {
+    cb(null, req.query.userId);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png')
+    cb(null, true);
+  else 
+    cb(null, false);
+};
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 2, // 2mb limit on profile photo uploading
+  },
+  fileFilter: fileFilter,
+}).single('file');
 
 router.get('/all-joined-events', async (req, res) => {
   const {username} = req.query;
@@ -235,14 +245,12 @@ router.patch('/change-personal', async (req, res) => {
 });
 
 router.patch('/change-profile-photo', (req, res) => {
-  /* TODO: HERE COULD BE ASYNC AWAIT */
-  const {userId} = req.query;
-
-  const file = req.files.file;
-
-  file.mv(`${__dirname}/../assets/images/${userId}.png`, (err) => {
-    if (err) return res.status(500).send(err);
-
+  upload(req, res, function (err) {
+    /* todo: improve here */
+    if (err) {
+      if(err.code === 'LIMIT_FILE_SIZE')
+      return res.status(400).send('You can upload maximum 2MB photo.');
+    }
     return res.send();
   });
 });
