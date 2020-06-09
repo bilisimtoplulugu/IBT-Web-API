@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-const Schema = mongoose.Schema;
+const {Schema,model} = mongoose;
 
 const eventSchema = new Schema({
   _id: mongoose.Schema.Types.ObjectId,
@@ -18,7 +18,8 @@ const eventSchema = new Schema({
   moderator: String,
   isOnline: Boolean,
   organizer: String,
+  eventLink: String,
 });
 
-const Event = mongoose.model('Event', eventSchema);
+const Event = model('Event', eventSchema);
 export default Event;
