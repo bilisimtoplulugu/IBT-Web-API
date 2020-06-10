@@ -1,7 +1,7 @@
 /* Packages I used */
 import express from 'express';
 import mongoose from 'mongoose';
-import redis from 'redis';
+import asyncRedis from 'async-redis';
 import dotenv from 'dotenv';
 import bodyParser from 'body-parser';
 import cors from 'cors';
@@ -18,7 +18,7 @@ app.use(express.static('assets'));
 dotenv.config(); // dotenv package configuration
 
 /* Redis Connection */
-export const client=1;/*  = redis.createClient(PORT_REDIS); */
+export const client = asyncRedis.createClient(PORT_REDIS);
 
 /* Mongoose connection provider */
 mongoose.connect(process.env.DB_URI, {useNewUrlParser: true}, (err) => {

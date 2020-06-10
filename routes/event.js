@@ -3,22 +3,39 @@ import mongoose from 'mongoose';
 
 import Event from '../models/event';
 import User from '../models/user';
+import UserEventMapping from '../models/userEventMapping';
 import toSeoUrl from '../utils/toSeoUrl';
+import {client as redisClient} from '../server';
+import cache from '../middleware/eventCache';
 
 const router = express.Router();
 
-router.get('/past', async (req, res) => {
+router.get('/past', cache, async (req, res) => {
   try {
-    const pastEvents = await Event.find({date: {$lt: new Date()}}).sort({date:1});
+    const pastEvents = await Event.find({date: {$lt: new Date()}}).sort({
+      date: 1,
+    });
+
+    if (!pastEvents)
+      return res.status(404).send('Could not find a past event :(');
+    redisClient.setex('pastEvents', 3600, JSON.stringify(pastEvents));
+
     return res.send(pastEvents);
   } catch (error) {
     return res.status(400).send(error);
   }
 });
 
-router.get('/near', async (req, res) => {
+router.get('/near', cache, async (req, res) => {
   try {
-    const nearEvents = await Event.find({date: {$gt: new Date()}}).sort({date:1});
+    const nearEvents = await Event.find({date: {$gt: new Date()}}).sort({
+      date: 1,
+    });
+
+    if (!nearEvents)
+      return res.status(404).send('Could not find a near event :(');
+    redisClient.setex('nearEvents', 3600, JSON.stringify(nearEvents));
+
     return res.send(nearEvents);
   } catch (error) {
     return res.status(400).send(error);
@@ -26,38 +43,60 @@ router.get('/near', async (req, res) => {
 });
 
 router.get('/all-participants', async (req, res) => {
-  const {eventUrl:seoUrl} = req.query;
+  const {eventUrl: seoUrl} = req.query;
 
-  const event = await Event.findOne({seoUrl}).select({
-    participants: 1,
-  });
+  const event = await Event.findOne({seoUrl})
+    .select({
+      participants: 1,
+    })
+    .populate('participants', 'username name surname');
+
+  const {participants} = event;
 
   if (!event) return res.status(404).send('Event not found!');
+  if (!participants.length) return res.status(404).send('No any participant.');
 
-  /* todo: populate here */
-  const participantsDetails = await User.find({
-    _id: {$in: event.participants},
-  }).select({username: 1, name: 1, surname: 1});
+  //console.log(participants);
+
+  return res.send(participants);
+
+  const participantsIDS = participants.map((participant) => participant._id);
+
+  const {joinedAt} = await UserEventMapping.find({
+    eventId: event._id,
+  }).select({joinedAt: 1, _id: 0});
+
+  console.log(joinedAt);
+
+  return res.send(participants);
+
+  const x = await UserEventMapping.find({eventId: event._id, userId});
+
+  const user = await User.findOne({username})
+    .select({joinedEvents: 1})
+    .populate(
+      'joinedEvents',
+      '_id title subtitle description organizer seoUrl date'
+    )
+    .exec();
 
   res.send(participantsDetails);
 });
 
-router.get('/:eventUrl', async (req, res) => {
-  const {eventUrl:seoUrl} = req.params;
+router.get('/:eventUrl', cache, async (req, res) => {
+  const {eventUrl: seoUrl} = req.params;
 
-  const event = await Event.findOne(
-    {seoUrl},
-    {participants: {$slice: 8}}
-  );
-
-  if (!event) return res.status(404).send('Event not found!');
-
-  /* todo: populate here */
-  const participantsDetails = await User.find({
-    _id: {$in: event.participants},
+  // todo: can i get all participants count (just count) and put event object here?
+  const event = await Event.findOne({seoUrl}).populate({
+    path: 'participants',
+    select: {name: 1, surname: 1, username: 1},
+    options: {limit: 8},
   });
 
-  res.json({event, participants: participantsDetails});
+  if (!event) return res.status(404).send('Event not found!');
+  redisClient.setex(seoUrl, 3600, JSON.stringify(event));
+
+  res.send(event);
 });
 
 router.post('/generate', async (req, res) => {
@@ -67,23 +106,26 @@ router.post('/generate', async (req, res) => {
 
   const seoUrl = toSeoUrl(title);
 
-  const existingControl = await Event.count({seoUrl})
-  if(existingControl) return res.status(400).send('Event is already exist with this title.');
+  // todo - question : should i keep cache count data?
+  const existingControl = await Event.countDocuments({seoUrl});
+  if (existingControl)
+    return res.status(400).send('Event is already exist with this title.');
 
   req.body._id = mongoose.Types.ObjectId();
   req.body.seoUrl = toSeoUrl(title);
-  const generatedEvent = await Event.create(req.body); // make select here
+  const generatedEvent = await Event.create(req.body);
 
   res.send(generatedEvent);
 });
 
 router.patch('/join', async (req, res) => {
+  // todo cache here??? ---
   const {userId, eventId} = req.body;
 
   if (!userId || !eventId)
     return res.status(400).send('You must fill all fields.');
 
-  const event = await Event.findById(eventId).select({participants:1});
+  const event = await Event.findById(eventId).select({participants: 1});
   const user = await User.findById(userId).select({joinedEvents: 1});
 
   if (!event) return res.status(404).send('Event could not found.');
@@ -93,6 +135,13 @@ router.patch('/join', async (req, res) => {
   await event.participants.push(userId);
   user.save();
   event.save();
+
+  const _id = mongoose.Types.ObjectId();
+  UserEventMapping.create({
+    _id,
+    userId: user._id,
+    eventId: event._id,
+  });
 
   res.send();
 });
