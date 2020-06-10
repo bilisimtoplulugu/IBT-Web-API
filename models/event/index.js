@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-const {Schema,model} = mongoose;
+const {Schema, model} = mongoose;
 
 const eventSchema = new Schema({
   _id: mongoose.Schema.Types.ObjectId,
@@ -13,7 +13,8 @@ const eventSchema = new Schema({
     default: Date.now(),
   },
   address: String,
-  participants: [String],
+  participants: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
+  participantLimit: Number,
   guests: [String],
   moderator: String,
   isOnline: Boolean,

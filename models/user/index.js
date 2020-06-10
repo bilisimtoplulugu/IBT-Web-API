@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 /* import PermissionSchema from './permission'; */
-const {Schema,model} = mongoose;
+const {Schema, model} = mongoose;
 
 const userSchema = new Schema({
   _id: mongoose.Schema.Types.ObjectId,
@@ -20,4 +20,5 @@ const userSchema = new Schema({
   /* permission: [PermissionSchema], */
 });
 
-export default model('User', userSchema);
+const User = model('User', userSchema);
+export default User;
