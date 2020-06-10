@@ -4,41 +4,18 @@ import bcrypt from 'bcrypt';
 import randomstring from 'randomstring';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
-import multer from 'multer';
 
 import User from '../models/user';
 import Event from '../models/event';
 
 import sendCodeToVerifyEmail from '../utils/sendCodeToVerifyEmail';
+import {upload} from '../config/multer';
+import cache from '../middleware/userCache';
 import {client as redisClient} from '../server';
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, './assets/images');
-  },
-  filename: function (req, file, cb) {
-    cb(null, req.query.userId);
-  },
-});
-
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png')
-    cb(null, true);
-  else 
-    cb(null, false);
-};
-
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 1024 * 1024 * 2, // 2mb limit on profile photo uploading
-  },
-  fileFilter: fileFilter,
-}).single('file');
-
-router.get('/all-joined-events', async (req, res) => {
+router.get('/all-joined-events', cache, async (req, res) => {
   const {username} = req.query;
 
   if (!username) return res.status(400).send('Please fill all fields.');
@@ -51,25 +28,15 @@ router.get('/all-joined-events', async (req, res) => {
     )
     .exec();
 
-  if (!user) return res.status(404).send('User not found.');
+  if (!user) return res.status(404).send('User could not found.');
+  redisClient.setex(`${username}-joined-events`, 3600, JSON.stringify(user));
 
   const {joinedEvents} = user;
 
   return res.send(joinedEvents);
 });
 
-router.get('/last-events', async (req, res) => {
-  const {userId} = req.query;
-  if (!userId) return res.status(400).send('Please fill all fields.');
-
-  const user = await User.findById(userId).select({
-    joinedEvents: 1,
-  });
-  const eventDetails = await Event.find({_id: {$in: user.joinedEvents}});
-  res.send(eventDetails);
-});
-
-router.get('/:username', async (req, res) => {
+router.get('/:username', cache, async (req, res) => {
   const {username} = req.params;
 
   const user = await User.findOne({username})
@@ -81,15 +48,15 @@ router.get('/:username', async (req, res) => {
       username: 1,
       joinedEvents: 1,
     })
-    .populate('joinedEvents', 'seoUrl')
+    .populate({path: 'joinedEvents', select: {seoUrl: 1}, options: {limit: 4}})
     .exec();
 
   if (!user) return res.status(404).send('User not found.');
+  redisClient.setex(username, 3600, JSON.stringify(user));
 
   res.send(user);
 });
 
-// POST request for /user/register endpoint
 router.post('/register', async (req, res) => {
   const {email, password} = req.body;
 
@@ -107,7 +74,6 @@ router.post('/register', async (req, res) => {
   res.json({user, token});
 });
 
-// POST request for /user/login endpoint
 router.post('/login', async (req, res) => {
   const {email, password} = req.body;
 
@@ -122,18 +88,19 @@ router.post('/login', async (req, res) => {
       username: 1,
       joinedEvents: 1,
     })
-    .populate('joinedEvents', 'seoUrl')
+    .populate({path: 'joinedEvents', select: {seoUrl: 1}, options: {limit: 4}})
     .exec();
   if (!user) return res.status(404).send('User not found.');
 
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.status(401).send('Incorrect Pass');
 
+  user.password = null;
   const token = await jwt.sign({user}, process.env.JWT_SECRET_KEY);
   res.json({user, token});
 });
 
-router.post('/auth', async (req, res) => {
+router.post('/auth', cache,async (req, res,next) => {
   const {token} = req.body;
 
   if (!token) return res.status(400).send('Unauthorized.');
@@ -142,7 +109,9 @@ router.post('/auth', async (req, res) => {
     const {
       user: {_id},
     } = await jwt.verify(token, process.env.JWT_SECRET_KEY);
-
+    req.qqq='q';
+    next();
+    
     const user = await User.findById(_id)
       .select({
         _id: 1,
@@ -154,6 +123,8 @@ router.post('/auth', async (req, res) => {
       })
       .populate('joinedEvents', 'seoUrl')
       .exec();
+      console.log('auth router')
+      return next();
 
     return res.send(user);
   } catch (e) {
@@ -168,7 +139,7 @@ router.post('/send-code-to-email', async (req, res) => {
 
   if (!emailTo) return res.status(400).send('Please fill all fields.');
 
-  const {length: isRegistered} = await User.count({email: emailTo});
+  const {length: isRegistered} = await User.countDocuments({email: emailTo});
 
   if (isRegistered > 0)
     return res.status(400).send('This e-mail address already registered.');
@@ -248,8 +219,8 @@ router.patch('/change-profile-photo', (req, res) => {
   upload(req, res, function (err) {
     /* todo: improve here */
     if (err) {
-      if(err.code === 'LIMIT_FILE_SIZE')
-      return res.status(400).send('You can upload maximum 2MB photo.');
+      if (err.code === 'LIMIT_FILE_SIZE')
+        return res.status(400).send('You can upload maximum 2MB photo.');
     }
     return res.send();
   });
