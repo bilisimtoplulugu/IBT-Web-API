@@ -13,6 +13,7 @@
     "author": "Istanbul Bilişim Topluluğu",
     "license": "MIT",
     "dependencies": {
+        "async-redis": "^1.1.7",
         "bcrypt": "^4.0.1",
         "body-parser": "^1.19.0",
         "cors": "^2.8.5",
