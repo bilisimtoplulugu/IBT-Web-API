@@ -100,19 +100,22 @@ router.post('/login', async (req, res) => {
   res.json({user, token});
 });
 
-router.post('/auth', cache,async (req, res,next) => {
+router.post('/auth', async (req, res, next) => {
   const {token} = req.body;
-
   if (!token) return res.status(400).send('Unauthorized.');
 
   try {
     const {
-      user: {_id},
+      user: {username},
     } = await jwt.verify(token, process.env.JWT_SECRET_KEY);
-    req.qqq='q';
-    next();
-    
-    const user = await User.findById(_id)
+
+    /* get from cache if there (todo: make modulerize) */
+    {
+      const user = await redisClient.get(username);
+      if (user) return res.send(JSON.parse(user));
+    }
+
+    const user = await User.findOne({username})
       .select({
         _id: 1,
         name: 1,
@@ -121,10 +124,14 @@ router.post('/auth', cache,async (req, res,next) => {
         username: 1,
         joinedEvents: 1,
       })
-      .populate('joinedEvents', 'seoUrl')
+      .populate({
+        path: 'joinedEvents',
+        select: {seoUrl: 1},
+        options: {limit: 4},
+      })
       .exec();
-      console.log('auth router')
-      return next();
+
+    if (!user) return res.status(404).send('User could not found.');
 
     return res.send(user);
   } catch (e) {

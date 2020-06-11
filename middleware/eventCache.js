@@ -1,7 +1,6 @@
 import {client as redisClient} from '../server';
 
 export default async (req, res, next) => {
-  console.log(req.route.path);
   switch (req.route.path) {
     case '/past':
       const pastValue = await redisClient.get('pastEvents');
