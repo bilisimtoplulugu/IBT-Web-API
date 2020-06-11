@@ -13,7 +13,7 @@ const router = express.Router();
 router.get('/past', cache, async (req, res) => {
   try {
     const pastEvents = await Event.find({date: {$lt: new Date()}}).sort({
-      date: 1,
+      date: -1,
     });
 
     if (!pastEvents)
@@ -99,7 +99,7 @@ router.get('/:eventUrl', cache, async (req, res) => {
   res.send(event);
 });
 
-router.post('/generate', async (req, res) => {
+router.post('/generate', cache, async (req, res) => {
   const {title} = req.body;
 
   if (!title) return res.status(400).send('You must fill all fields.');
@@ -118,9 +118,9 @@ router.post('/generate', async (req, res) => {
   res.send(generatedEvent);
 });
 
-router.patch('/join', async (req, res) => {
+router.patch('/join', cache, async (req, res) => {
   // todo cache here??? ---
-  const {userId, eventId} = req.body;
+  const {userId, eventId, eventUrl} = req.body;
 
   if (!userId || !eventId)
     return res.status(400).send('You must fill all fields.');
@@ -146,8 +146,8 @@ router.patch('/join', async (req, res) => {
   res.send();
 });
 
-router.patch('/unjoin', async (req, res) => {
-  const {userId, eventId} = req.body;
+router.patch('/unjoin',cache, async (req, res) => {
+  const {userId, eventId,eventUrl} = req.body;
   if (!userId || !eventId)
     return res.status(400).send('You must fill all fields.');
 
@@ -161,6 +161,8 @@ router.patch('/unjoin', async (req, res) => {
   await event.participants.remove(userId);
   user.save();
   event.save();
+
+  /* remove from also usermapping */
 
   res.send();
 });

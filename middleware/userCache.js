@@ -13,6 +13,7 @@ export default async (req, res, next) => {
       const {username} = req.params;
       const user = await redisClient.get(username);
       if (user) return res.send(JSON.parse(user));
+      console.log('l')
       return next();
     }
   }

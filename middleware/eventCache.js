@@ -10,6 +10,15 @@ export default async (req, res, next) => {
       const nearValue = await redisClient.get('nearEvents');
       if (nearValue) return res.send(JSON.parse(nearValue));
       return next();
+    case '/generate':
+      await redisClient.del('nearEvents');
+      return next();
+    case '/join':
+    case '/unjoin': {
+      const {eventUrl} = req.body;
+      await redisClient.del(eventUrl);
+      return next();
+    }
     default:
       //:eventUrl
       const {eventUrl} = req.params;
