@@ -9,11 +9,15 @@ export default async (req, res, next) => {
       return next();
     }
     case '/:username': {
-      //:username
       const {username} = req.params;
       const user = await redisClient.get(username);
       if (user) return res.send(JSON.parse(user));
-      console.log('l')
+      return next();
+    }
+    case '/change-personal': {
+      console.log('hiır');
+      const {username} = req.body;
+      await redisClient.del(username);
       return next();
     }
   }

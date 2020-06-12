@@ -15,7 +15,8 @@ export default async (req, res, next) => {
       return next();
     case '/join':
     case '/unjoin': {
-      const {eventUrl} = req.body;
+      const {eventUrl,username} = req.body;
+      await redisClient.del(username);
       await redisClient.del(eventUrl);
       return next();
     }

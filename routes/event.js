@@ -120,7 +120,7 @@ router.post('/generate', cache, async (req, res) => {
 
 router.patch('/join', cache, async (req, res) => {
   // todo cache here??? ---
-  const {userId, eventId, eventUrl} = req.body;
+  const {userId, eventId, eventUrl,username} = req.body;
 
   if (!userId || !eventId)
     return res.status(400).send('You must fill all fields.');
@@ -147,7 +147,7 @@ router.patch('/join', cache, async (req, res) => {
 });
 
 router.patch('/unjoin',cache, async (req, res) => {
-  const {userId, eventId,eventUrl} = req.body;
+  const {userId, eventId,eventUrl,username} = req.body;
   if (!userId || !eventId)
     return res.status(400).send('You must fill all fields.');
 

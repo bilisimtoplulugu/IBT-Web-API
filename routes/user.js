@@ -22,10 +22,19 @@ router.get('/all-joined-events', cache, async (req, res) => {
 
   const user = await User.findOne({username})
     .select({joinedEvents: 1})
-    .populate(
-      'joinedEvents',
-      '_id title subtitle description organizer seoUrl date'
-    )
+    .populate({
+      path: 'joinedEvents',
+      select: {
+        _id: 1,
+        title: 1,
+        subtitle: 1,
+        description: 1,
+        organizer: 1,
+        seoUrl: 1,
+        date: 1,
+      },
+      options: {sort: {date: -1}},
+    })
     .exec();
 
   if (!user) return res.status(404).send('User could not found.');
@@ -48,7 +57,11 @@ router.get('/:username', cache, async (req, res) => {
       username: 1,
       joinedEvents: 1,
     })
-    .populate({path: 'joinedEvents', select: {seoUrl: 1}, options: {limit: 4}})
+    .populate({
+      path: 'joinedEvents',
+      select: {seoUrl: 1},
+      options: {limit: 4, sort: {date: -1}},
+    })
     .exec();
 
   if (!user) return res.status(404).send('User not found.');
@@ -127,7 +140,7 @@ router.post('/auth', async (req, res, next) => {
       .populate({
         path: 'joinedEvents',
         select: {seoUrl: 1},
-        options: {limit: 4},
+        options: {limit: 4, sort: {date: -1}},
       })
       .exec();
 
@@ -201,7 +214,7 @@ router.patch('/change-password', async (req, res) => {
   res.send();
 });
 
-router.patch('/change-personal', async (req, res) => {
+router.patch('/change-personal', cache, async (req, res) => {
   const {userId, name, surname, username, email} = req.body;
   if (!userId || !name || !surname || !email)
     return res.status(400).send('Please fill all fields.');
