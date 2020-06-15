@@ -106,7 +106,6 @@ router.post('/generate', cache, async (req, res) => {
 
   const seoUrl = toSeoUrl(title);
 
-  // todo - question : should i keep cache count data?
   const existingControl = await Event.countDocuments({seoUrl});
   if (existingControl)
     return res.status(400).send('Event is already exist with this title.');
@@ -119,7 +118,6 @@ router.post('/generate', cache, async (req, res) => {
 });
 
 router.patch('/join', cache, async (req, res) => {
-  // todo cache here??? ---
   const {userId, eventId, eventUrl,username} = req.body;
 
   if (!userId || !eventId)

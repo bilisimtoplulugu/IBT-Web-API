@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-export default (emailTo, confirmCode) =>
+export default (emailTo:any, confirmCode:any) =>
   new Promise(async (resolve, reject) => {
     const emailTransfer = nodemailer.createTransport({
       service: 'gmail',

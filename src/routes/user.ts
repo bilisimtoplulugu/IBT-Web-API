@@ -16,7 +16,7 @@ import {client as redisClient} from '../server';
 const router = express.Router();
 
 router.get('/all-joined-events', cache, async (req, res) => {
-  const {username} = req.query;
+  const {username} : string|null = req.query;
 
   if (!username) return res.status(400).send('Please fill all fields.');
 
@@ -40,7 +40,7 @@ router.get('/all-joined-events', cache, async (req, res) => {
   if (!user) return res.status(404).send('User could not found.');
   redisClient.setex(`${username}-joined-events`, 3600, JSON.stringify(user));
 
-  const {joinedEvents} = user;
+  const {joinedEvents} :any = user;
 
   return res.send(joinedEvents);
 });
@@ -83,14 +83,14 @@ router.post('/register', async (req, res) => {
   // generate new user on db
   const user = await User.create(req.body);
 
-  const token = await jwt.sign({user}, process.env.JWT_SECRET_KEY);
+  const token = await jwt.sign({user}, process.env.JWT_SECRET_KEY!); //todo ts
   res.json({user, token});
 });
 
 router.post('/login', async (req, res) => {
-  const {email, password} = req.body;
+  const {email, password} : {email:String,password:String} = req.body;
 
-  const user = await User.findOne()
+  const user : any = await User.findOne()
     .or([{email}, {username: email}])
     .select({
       _id: 1,
@@ -159,9 +159,9 @@ router.post('/send-code-to-email', async (req, res) => {
 
   if (!emailTo) return res.status(400).send('Please fill all fields.');
 
-  const {length: isRegistered} = await User.countDocuments({email: emailTo});
+  const length : number = await User.countDocuments({email: emailTo});
 
-  if (isRegistered > 0)
+  if (length > 0)
     return res.status(400).send('This e-mail address already registered.');
 
   console.log(confirmCode);
@@ -174,14 +174,14 @@ router.post('/send-code-to-email', async (req, res) => {
 });
 
 router.post('/email-verification', async (req, res) => {
-  const {code, token} = req.body;
+  const {code, token}:{code:number,token:string} = req.body;
 
   if (!code || !token) return res.status(400).send('Please fill all fields.');
 
   try {
-    const {email_verification} = await jwt.verify(
+    const {email_verification} : any = await jwt.verify( // todo any
       token,
-      process.env.JWT_SECRET_KEY
+      process.env.JWT_SECRET_KEY!
     );
 
     if (code !== email_verification)
@@ -194,20 +194,20 @@ router.post('/email-verification', async (req, res) => {
 });
 
 router.patch('/change-password', async (req, res) => {
-  const {userId, oldPass, newPass, newPassAgain} = req.body;
+  const {userId, oldPass, newPass, newPassAgain}  = req.body;
   if (!userId || !oldPass || !newPass || !newPassAgain)
     return res.status(400).send('Please fill all fields.');
 
   if (newPass !== newPassAgain)
     return res.status(400).send('Password does not match.');
 
-  const user = await User.findById(userId);
+  const user : object|null = await User.findById(userId);
   if (!user) return res.status(404).send('User not found.');
 
-  const passCheck = await bcrypt.compare(oldPass, user.password);
+  const passCheck : boolean = await bcrypt.compare(oldPass, user.password);
   if (!passCheck) return res.status(400).send('Incorrect old password.');
 
-  const hash = await bcrypt.hash(newPass, 10);
+  const hash : string = await bcrypt.hash(newPass, 10);
   user.password = hash;
   user.save();
 
