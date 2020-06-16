@@ -1,6 +1,6 @@
 import express from 'express';
 
-import cache from '../middleware/userCache';
+import cache from '../middlewares/userCache';
 import {
   allJoinedEventsController,
   usernameController,

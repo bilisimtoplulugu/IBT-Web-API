@@ -31,10 +31,6 @@ mongoose.set('useNewUrlParser', true);
 mongoose.set('useFindAndModify', false);
 mongoose.set('useCreateIndex', true);
 
-/* app.get('/', (req, res) => {
-    res.send('Index Get Request');
-    }); */
-
 app.use('/', api); // Use API router for all requests to this server
 
 app.listen(PORT, () => console.log(`Server is running on ${PORT}`)); // Run server

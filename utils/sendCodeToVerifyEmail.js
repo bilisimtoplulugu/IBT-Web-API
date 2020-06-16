@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 
 export default (emailTo, confirmCode) =>
   new Promise(async (resolve, reject) => {
+    console.log('qol');
     const emailTransfer = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -10,6 +11,7 @@ export default (emailTo, confirmCode) =>
       },
     });
 
+    console.log('zol');
     const emailInfo = {
       from: process.env.SENDER_MAIL,
       to: emailTo,
@@ -17,10 +19,13 @@ export default (emailTo, confirmCode) =>
       text: `Here is your confirm code: ${confirmCode}`,
     };
 
+    console.log('yol');
     try {
       await emailTransfer.sendMail(emailInfo);
-      resolve('sccs');
+      console.log('pol');
+      return resolve('sccs');
     } catch (err) {
-      reject(err);
+      console.log('col')
+      return reject(err);
     }
   });

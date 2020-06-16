@@ -1,6 +1,6 @@
 import express from 'express';
 
-import cache from '../middleware/eventCache';
+import cache from '../middlewares/eventCache';
 import {
   pastController,
   nearController,
