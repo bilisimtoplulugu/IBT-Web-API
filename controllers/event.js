@@ -48,36 +48,33 @@ export const allParticipantsController = async (req, res) => {
     })
     .populate('participants', 'username name surname');
 
-  const {participants} = event;
-
   if (!event) return res.status(404).send('Event not found!');
+
+  let {participants} = event;
   if (!participants.length) return res.status(404).send('No any participant.');
 
-  //console.log(participants);
-
-  return res.send(participants);
+  /* bad practice */
 
   const participantsIDS = participants.map((participant) => participant._id);
 
-  const {joinedAt} = await UserEventMapping.find({
+  const userEventMappings = await UserEventMapping.find({
     eventId: event._id,
-  }).select({joinedAt: 1, _id: 0});
+    userId: {$in: participantsIDS},
+  });
 
-  console.log(joinedAt);
+  participants = participants.map((participant) =>
+    userEventMappings.map((userEventMapping) => {
+      if (userEventMapping.userId.toString() == participant._id) {
+        const {_doc: doc} = {...participant};
+        doc.joinedAt = userEventMapping.joinedAt;
+        return doc;
+      }
+    })
+  );
+  
+  /* bad practice */
 
   return res.send(participants);
-
-  const x = await UserEventMapping.find({eventId: event._id, userId});
-
-  const user = await User.findOne({username})
-    .select({joinedEvents: 1})
-    .populate(
-      'joinedEvents',
-      '_id title subtitle description organizer seoUrl date'
-    )
-    .exec();
-
-  res.send(participantsDetails);
 };
 
 export const eventController = async (req, res) => {
