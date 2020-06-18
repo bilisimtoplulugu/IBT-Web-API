@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 const {Schema, model} = mongoose;
 
+import commentSchema from './comment'
+
 const eventSchema = new Schema({
   _id: mongoose.Schema.Types.ObjectId,
   title: String,
@@ -15,11 +17,12 @@ const eventSchema = new Schema({
   address: String,
   participants: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
   participantLimit: Number,
-  guests: [String],
+  guests: [String], /*  make an external collection */
   moderator: String,
   isOnline: Boolean,
   organizer: String,
   eventLink: String,
+  comments:[commentSchema]
 });
 
 const Event = model('Event', eventSchema);
