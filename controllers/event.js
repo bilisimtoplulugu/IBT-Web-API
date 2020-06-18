@@ -140,11 +140,17 @@ export const joinController = async (req, res) => {
   if (!userId || !eventId)
     return res.status(400).send('You must fill all fields.');
 
-  const event = await Event.findById(eventId).select({participants: 1});
+  const event = await Event.findById(eventId).select({
+    participants: 1,
+    participantLimit: 1,
+  });
   const user = await User.findById(userId).select({joinedEvents: 1});
 
   if (!event) return res.status(404).send('Event could not found.');
   if (!user) return res.status(404).send('User could not found.');
+
+  if (event.participants.length == event.participantLimit)
+    return res.send('Participant limit is full.');
 
   await user.joinedEvents.push(eventId);
   await event.participants.push(userId);
