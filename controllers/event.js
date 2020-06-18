@@ -71,7 +71,7 @@ export const allParticipantsController = async (req, res) => {
       }
     })
   );
-  
+
   /* bad practice */
 
   return res.send(participants);
@@ -100,7 +100,6 @@ export const generateController = async (req, res) => {
 
   const seoUrl = toSeoUrl(title);
 
-  // todo - question : should i keep cache count data?
   const existingControl = await Event.countDocuments({seoUrl});
   if (existingControl)
     return res.status(400).send('Event is already exist with this title.');
@@ -112,9 +111,31 @@ export const generateController = async (req, res) => {
   res.send(generatedEvent);
 };
 
+export const deleteController = async (req, res) => {
+  const {eventId} = req.body;
+  /* todo: error handling here */
+
+  const {participants} = await Event.findByIdAndDelete(eventId).select({
+    participants: 1,
+  });
+
+  const joinedUsers = await User.find()
+    .where('_id')
+    .in(participants)
+    .select({joinedEvents: 1});
+
+  joinedUsers.map((joinedUser) => {
+    joinedUser.joinedEvents.remove(eventId);
+    joinedUser.save();
+  });
+
+  await UserEventMapping.deleteMany({eventId});
+
+  res.send();
+};
+
 export const joinController = async (req, res) => {
-  // todo cache here??? ---
-  const {userId, eventId, eventUrl, username} = req.body;
+  const {userId, eventId} = req.body;
 
   if (!userId || !eventId)
     return res.status(400).send('You must fill all fields.');
@@ -141,7 +162,7 @@ export const joinController = async (req, res) => {
 };
 
 export const unjoinController = async (req, res) => {
-  const {userId, eventId, eventUrl, username} = req.body;
+  const {userId, eventId} = req.body;
   if (!userId || !eventId)
     return res.status(400).send('You must fill all fields.');
 
@@ -156,7 +177,10 @@ export const unjoinController = async (req, res) => {
   user.save();
   event.save();
 
-  /* remove from also usermapping */
+  await UserEventMapping.findOneAndDelete({
+    eventId: event._id,
+    userId: {$in: userId},
+  });
 
   res.send();
 };
