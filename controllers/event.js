@@ -111,6 +111,34 @@ export const generateController = async (req, res) => {
   res.send(generatedEvent);
 };
 
+export const updateController = async (req, res) => {
+  const {
+    eventId,
+    title,
+    subtitle,
+    description,
+    address,
+    isOnline,
+    date,
+    participantLimit,
+  } = req.body;
+
+  const existingControl = await Event.countDocuments({_id: eventId});
+  if (!existingControl) return res.status(404).send('Event not found!');
+
+  await Event.findByIdAndUpdate(eventId, {
+    title,
+    subtitle,
+    description,
+    address,
+    isOnline,
+    date,
+    participantLimit,
+  });
+
+  res.send();
+};
+
 export const deleteController = async (req, res) => {
   const {eventId} = req.body;
   /* todo: error handling here */

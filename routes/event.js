@@ -10,12 +10,15 @@ import {
   deleteController,
   joinController,
   unjoinController,
+  updateController,
 } from '../controllers/event';
 
 const router = express.Router();
 
 // event post request = generate event
 router.post('/', cache, generateController);
+
+router.put('/',  updateController); //todo put or patch ??? 
 
 router.delete('/', deleteController);
 
